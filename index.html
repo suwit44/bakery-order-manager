@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🥐 Bakery Order Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FDF6EC; --warm-white: #FEFCF8;
+    --caramel: #C8860A; --caramel-light: #E8A020; --caramel-dark: #9A6408;
+    --brown: #5C3D1E; --brown-light: #8B6040; --brown-pale: #D4B896;
+    --green: #4A7C59; --red: #C0392B; --gray: #888;
+    --shadow: 0 4px 24px rgba(92,61,30,0.10);
+    --shadow-lg: 0 8px 40px rgba(92,61,30,0.16);
+    --radius: 16px; --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(--brown); min-height: 100vh; }
+
+  /* HEADER */
+  .app-header {
+    background: linear-gradient(135deg, var(--brown) 0%, #3D2410 100%);
+    padding: 18px 24px 0; position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 20px rgba(92,61,30,0.30);
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo { font-size: 28px; }
+  .app-title { font-family: 'Playfair Display', serif; color: var(--caramel-light); font-size: 22px; font-weight: 700; }
+  .app-subtitle { color: var(--brown-pale); font-size: 12px; letter-spacing: 1px; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 10px 20px; border: none; background: transparent;
+    color: var(--brown-pale); font-family: 'Sarabun', sans-serif;
+    font-size: 14px; font-weight: 500; border-radius: 10px 10px 0 0;
+    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+  .nav-tab:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  .nav-tab.active { background: var(--cream); color: var(--brown); font-weight: 600; }
+  .nav-badge {
+    background: var(--caramel); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 2px 7px; border-radius: 20px; min-width: 20px; text-align: center;
+  }
+  .nav-tab.active .nav-badge { background: var(--caramel-dark); }
+
+  /* SYNC STATUS BAR */
+  .sync-bar {
+    background: rgba(255,255,255,0.07); border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 6px 24px; display: flex; align-items: center; gap: 8px; font-size: 12px;
+  }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .sync-dot.ok { background: #6fcf97; }
+  .sync-dot.syncing { background: var(--caramel-light); animation: pulse 1s infinite; }
+  .sync-dot.error { background: #e57373; }
+  .sync-dot.offline { background: var(--gray); }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .sync-text { color: var(--brown-pale); flex: 1; }
+  .sync-btn {
+    background: rgba(255,255,255,0.12); border: none; color: var(--brown-pale);
+    padding: 3px 10px; border-radius: 6px; font-size: 11px; cursor: pointer;
+    font-family: 'Sarabun', sans-serif; transition: background 0.2s;
+  }
+  .sync-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
+  .sync-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* GDRIVE SETUP BANNER */
+  .setup-banner {
+    background: linear-gradient(135deg, #fff8e1, #fff3cd);
+    border: 1.5px solid var(--caramel-light); border-radius: var(--radius);
+    padding: 20px 24px; margin-bottom: 20px; display: flex; gap: 16px; align-items: flex-start;
+  }
+  .setup-banner .setup-icon { font-size: 32px; flex-shrink: 0; }
+  .setup-banner h3 { font-family: 'Playfair Display', serif; color: var(--brown); margin-bottom: 6px; }
+  .setup-banner p { font-size: 13px; color: var(--brown-light); line-height: 1.6; margin-bottom: 10px; }
+  .setup-steps { font-size: 12px; color: var(--brown-light); list-style: none; padding: 0; }
+  .setup-steps li { padding: 3px 0; }
+  .setup-steps li::before { content: "→ "; color: var(--caramel); }
+
+  /* PAGES */
+  .page { display: none; padding: 24px; max-width: 760px; margin: 0 auto; }
+  .page.active { display: block; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--brown); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .section-title span { font-size: 28px; }
+  .card { background: var(--warm-white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; border: 1px solid rgba(200,134,10,0.12); }
+
+  /* FORM */
+  .form-group { margin-bottom: 20px; }
+  .form-label { display: block; font-weight: 600; font-size: 14px; color: var(--brown-light); margin-bottom: 7px; }
+  .form-label .req { color: var(--caramel); margin-left: 3px; }
+  .form-input {
+    width: 100%; padding: 12px 16px; border: 1.5px solid var(--brown-pale);
+    border-radius: var(--radius-sm); font-family: 'Sarabun', sans-serif;
+    font-size: 15px; color: var(--brown); background: #fff;
+    transition: border 0.2s, box-shadow 0.2s; outline: none;
+  }
+  .form-input:focus { border-color: var(--caramel); box-shadow: 0 0 0 3px rgba(200,134,10,0.12); }
+  .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* UPLOAD */
+  .upload-zone {
+    border: 2px dashed var(--brown-pale); border-radius: var(--radius-sm);
+    padding: 32px 16px; text-align: center; cursor: pointer; transition: all 0.2s;
+    background: rgba(200,134,10,0.03); position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--caramel); background: rgba(200,134,10,0.07); }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 36px; margin-bottom: 8px; }
+  .upload-text { color: var(--gray); font-size: 14px; }
+  .upload-hint { color: var(--brown-pale); font-size: 12px; margin-top: 4px; }
+  .img-preview { margin-top: 14px; position: relative; display: inline-block; }
+  .img-preview img { max-width: 100%; max-height: 200px; border-radius: 10px; border: 2px solid var(--caramel-light); display: block; }
+  .img-preview .remove-img {
+    position: absolute; top: -8px; right: -8px; background: var(--red); color: #fff;
+    border: none; border-radius: 50%; width: 24px; height: 24px;
+    cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 11px 24px; border: none; border-radius: var(--radius-sm);
+    font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--caramel) 0%, var(--caramel-dark) 100%); color: #fff; box-shadow: 0 3px 12px rgba(200,134,10,0.35); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 18px rgba(200,134,10,0.45); }
+  .btn-primary:disabled { opacity: 0.6; transform: none; cursor: default; }
+  .btn-ghost { background: transparent; color: var(--brown-light); border: 1.5px solid var(--brown-pale); }
+  .btn-ghost:hover { background: rgba(92,61,30,0.06); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #a93226; }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-success:hover { background: #3a6148; }
+  .btn-sm { padding: 6px 14px; font-size: 13px; }
+  .btn-row { display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
+
+  /* ORDER CARDS */
+  .order-card { background: var(--warm-white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(200,134,10,0.12); overflow: hidden; transition: box-shadow 0.2s; margin-bottom: 16px; }
+  .order-card:hover { box-shadow: var(--shadow-lg); }
+  .order-card-header {
+    background: linear-gradient(90deg, rgba(200,134,10,0.10) 0%, transparent 100%);
+    padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; border-bottom: 1px solid rgba(200,134,10,0.10);
+  }
+  .order-name { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; color: var(--brown); }
+  .order-id { font-size: 11px; color: var(--gray); }
+  .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .status-new { background: rgba(74,124,89,0.15); color: var(--green); }
+  .status-late { background: rgba(192,57,43,0.12); color: var(--red); }
+  .order-card-body { padding: 16px 20px; }
+  .order-meta { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
+  .meta-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .meta-label { color: var(--gray); }
+  .meta-value { font-weight: 600; color: var(--brown); }
+  .meta-value.late { color: var(--red); }
+  .days-ago { font-size: 11px; color: var(--gray); background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 20px; }
+  .order-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .drive-link { font-size: 11px; color: var(--caramel); text-decoration: none; margin-left: 4px; }
+  .drive-link:hover { text-decoration: underline; }
+
+  /* DONE */
+  .done-card { background: var(--warm-white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(74,124,89,0.15); overflow: hidden; margin-bottom: 14px; }
+  .done-header { background: linear-gradient(90deg, rgba(74,124,89,0.10) 0%, transparent 100%); padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid rgba(74,124,89,0.10); }
+  .done-name { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; color: var(--brown); }
+  .done-badge { background: rgba(74,124,89,0.15); color: var(--green); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .done-body { padding: 14px 18px; }
+  .done-meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; }
+  .done-actions-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.60); z-index: 999; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--warm-white); border-radius: var(--radius); box-shadow: var(--shadow-lg); max-width: 540px; width: 100%; padding: 24px; animation: popIn 0.2s ease; max-height: 90vh; overflow-y: auto; }
+  @keyframes popIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--brown); margin-bottom: 16px; }
+  .modal img { width: 100%; border-radius: 10px; border: 2px solid var(--caramel-light); display: block; margin-bottom: 16px; }
+  .modal-close { display: block; margin-left: auto; }
+
+  /* TOAST */
+  #toast { position: fixed; bottom: 24px; right: 24px; background: var(--brown); color: var(--cream); padding: 12px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; box-shadow: var(--shadow-lg); transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 9999; max-width: 300px; }
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* MISC */
+  .divider { border: none; border-top: 1.5px solid rgba(200,134,10,0.12); margin: 20px 0; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .empty-state { text-align: center; padding: 60px 24px; color: var(--gray); }
+  .empty-icon { font-size: 56px; margin-bottom: 12px; }
+  .empty-text { font-size: 16px; }
+  .empty-sub { font-size: 13px; margin-top: 6px; color: var(--brown-pale); }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* RESPONSIVE: TABLET + PHONE */
+  @media (max-width: 768px) {
+    body { padding-bottom: env(safe-area-inset-bottom); }
+    .app-header {
+      padding: 12px 12px 0;
+      position: sticky;
+      top: 0;
+    }
+    .header-top {
+      margin-bottom: 10px;
+      align-items: flex-start;
+    }
+    .header-left {
+      gap: 10px;
+      min-width: 0;
+    }
+    .logo { font-size: 24px; }
+    .app-title {
+      font-size: 19px;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: calc(100vw - 70px);
+    }
+    .app-subtitle {
+      font-size: 11px;
+      letter-spacing: 0.2px;
+    }
+    .nav-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      overflow: visible;
+    }
+    .nav-tab {
+      justify-content: center;
+      padding: 9px 6px;
+      font-size: 12px;
+      border-radius: 12px 12px 0 0;
+      min-width: 0;
+      line-height: 1.2;
+      white-space: normal;
+      text-align: center;
+    }
+    .nav-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      min-width: 18px;
+    }
+    .sync-bar {
+      padding: 7px 4px 9px;
+      font-size: 11px;
+      gap: 6px;
+    }
+    .sync-text {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .sync-btn {
+      padding: 5px 10px;
+      min-height: 30px;
+    }
+    .page {
+      padding: 14px 12px 24px;
+      max-width: 100%;
+    }
+    .section-title {
+      font-size: 21px;
+      margin-bottom: 14px;
+      line-height: 1.2;
+    }
+    .section-title span { font-size: 24px; }
+    .card {
+      padding: 18px 14px;
+      border-radius: 14px;
+    }
+    .setup-banner {
+      padding: 14px;
+      gap: 10px;
+      border-radius: 14px;
+    }
+    .setup-banner .setup-icon { font-size: 26px; }
+    .setup-banner p,
+    .setup-steps { font-size: 12px; }
+    .date-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-input {
+      min-height: 46px;
+      font-size: 16px; /* ป้องกัน iPhone zoom เวลาแตะ input */
+      padding: 12px 13px;
+    }
+    .upload-zone {
+      padding: 26px 12px;
+      min-height: 132px;
+    }
+    .upload-icon { font-size: 34px; }
+    .img-preview {
+      display: block !important;
+      width: 100%;
+      text-align: center;
+    }
+    .img-preview[style*="display:none"] { display: none !important; }
+    .img-preview img {
+      width: 100%;
+      max-height: 260px;
+      object-fit: contain;
+      background: #fff;
+    }
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      position: sticky;
+      bottom: 0;
+      background: linear-gradient(to top, var(--warm-white) 78%, rgba(254,252,248,0));
+      padding-top: 14px;
+      padding-bottom: max(4px, env(safe-area-inset-bottom));
+      z-index: 5;
+    }
+    .btn {
+      width: 100%;
+      justify-content: center;
+      min-height: 44px;
+      padding: 11px 14px;
+    }
+    .btn-sm {
+      min-height: 40px;
+      padding: 9px 12px;
+      font-size: 13px;
+    }
+    .top-bar {
+      margin-bottom: 12px;
+    }
+    .order-card-header,
+    .done-header {
+      padding: 13px 14px;
+      align-items: flex-start;
+    }
+    .order-name,
+    .done-name {
+      font-size: 16px;
+      overflow-wrap: anywhere;
+    }
+    .order-card-body,
+    .done-body {
+      padding: 14px;
+    }
+    .order-meta,
+    .done-meta {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .meta-item {
+      align-items: flex-start;
+      flex-wrap: wrap;
+      line-height: 1.45;
+    }
+    .order-actions,
+    .done-actions-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    #doneActions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .modal-overlay {
+      padding: 10px;
+      align-items: flex-end;
+    }
+    .modal {
+      max-width: 100%;
+      max-height: 92vh;
+      padding: 18px 14px;
+      border-radius: 18px 18px 0 0;
+    }
+    .modal-title {
+      font-size: 18px;
+    }
+    #toast {
+      left: 12px;
+      right: 12px;
+      bottom: max(14px, env(safe-area-inset-bottom));
+      max-width: none;
+      text-align: center;
+    }
+    .empty-state {
+      padding: 46px 16px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .app-title { font-size: 17px; }
+    .app-subtitle { display: none; }
+    .nav-tab { font-size: 11px; padding-left: 4px; padding-right: 4px; }
+    .card { padding: 16px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-top">
+    <div class="header-left">
+      <div class="logo">🥐</div>
+      <div>
+        <div class="app-title">Bakery Order Manager</div>
+        <div class="app-subtitle">ระบบจัดการออเดอร์ร้านเบเกอรี่</div>
+      </div>
+    </div>
+  </div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('create')">✏️ สร้างออเดอร์</button>
+    <button class="nav-tab" onclick="showPage('track')">
+      📋 ติดตามออเดอร์ <span class="nav-badge" id="trackBadge">0</span>
+    </button>
+    <button class="nav-tab" onclick="showPage('done')">
+      ✅ เสร็จสิ้นแล้ว <span class="nav-badge" id="doneBadge">0</span>
+    </button>
+  </nav>
+  <div class="sync-bar">
+    <div class="sync-dot offline" id="syncDot"></div>
+    <span class="sync-text" id="syncText">ยังไม่ได้เชื่อมต่อ Google Drive</span>
+    <button class="sync-btn" id="syncBtn" onclick="manualSync()">🔄 Sync</button>
+  </div>
+</header>
+
+<!-- PAGE 1: CREATE -->
+<div class="page active" id="page-create">
+  <div id="setupBanner"></div>
+  <div class="section-title"><span>✏️</span> สร้างออเดอร์ใหม่</div>
+  <div class="card">
+    <div class="form-group">
+      <label class="form-label">ชื่อออเดอร์ <span class="req">*</span></label>
+      <input class="form-input" id="orderName" placeholder="เช่น เค้กวันเกิดคุณแม่, ครัวซองต์ 20 ชิ้น..." />
+    </div>
+    <div class="date-row">
+      <div class="form-group">
+        <label class="form-label">วันรับออเดอร์ <span class="req">*</span></label>
+        <input class="form-input" type="date" id="orderReceived" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">วันส่ง/รับสินค้า <span class="req">*</span></label>
+        <input class="form-input" type="date" id="orderDelivery" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">แนบรูปใบคำสั่งซื้อ</label>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="orderImg" accept="image/*" capture="environment" onchange="handleImg(event)" />
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">ถ่ายรูปหรืออัปโหลดรูปใบคำสั่งซื้อ</div>
+        <div class="upload-hint">รองรับ JPG, PNG, HEIC</div>
+      </div>
+      <div class="img-preview" id="imgPreview" style="display:none">
+        <img id="imgPreviewEl" src="" alt="preview" />
+        <button class="remove-img" onclick="removeImg()">✕</button>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="resetForm()">✕ ยกเลิก</button>
+      <button class="btn btn-primary" id="createBtn" onclick="createOrder()">🥐 สร้างออเดอร์</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: TRACK -->
+<div class="page" id="page-track">
+  <div class="top-bar">
+    <div class="section-title"><span>📋</span> ติดตามออเดอร์</div>
+  </div>
+  <div id="trackList"></div>
+</div>
+
+<!-- PAGE 3: DONE -->
+<div class="page" id="page-done">
+  <div class="top-bar">
+    <div class="section-title"><span>✅</span> เสร็จสิ้นแล้ว</div>
+  </div>
+  <div id="doneActions" style="margin-bottom:16px"></div>
+  <div id="doneList"></div>
+</div>
+
+<!-- MODAL: VIEW IMG -->
+<div class="modal-overlay" id="imgModal" onclick="closeImgModal(event)">
+  <div class="modal">
+    <div class="modal-title">📄 ใบคำสั่งซื้อ</div>
+    <img id="modalImg" src="" alt="order image" />
+    <button class="btn btn-ghost modal-close" onclick="closeImgModal()">ปิด</button>
+  </div>
+</div>
+
+<!-- MODAL: EDIT ORDER -->
+<div class="modal-overlay" id="editModal" onclick="closeEditModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">✏️ แก้ไขออเดอร์</div>
+    <input type="hidden" id="editId" />
+    <div class="form-group">
+      <label class="form-label">ชื่อออเดอร์</label>
+      <input class="form-input" id="editName" />
+    </div>
+    <div class="date-row">
+      <div class="form-group">
+        <label class="form-label">วันรับออเดอร์</label>
+        <input class="form-input" type="date" id="editReceived" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">วันส่ง/รับสินค้า</label>
+        <input class="form-input" type="date" id="editDelivery" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">เปลี่ยนรูปใบคำสั่งซื้อ (ไม่บังคับ)</label>
+      <div class="upload-zone">
+        <input type="file" accept="image/*" capture="environment" onchange="handleEditImg(event)" />
+        <div class="upload-icon" style="font-size:24px">📷</div>
+        <div class="upload-text" style="font-size:13px">อัปโหลดรูปใหม่</div>
+      </div>
+      <div id="editImgPreviewWrap" style="margin-top:10px;display:none">
+        <img id="editImgPreview" src="" style="max-height:120px;border-radius:8px;border:2px solid var(--caramel-light)" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeEditModal()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveEdit()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Google API -->
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
+
+<script>
+// ════════════════════════════════════════════════════
+// CONFIG — ใส่ค่าของคุณที่นี่
+// ════════════════════════════════════════════════════
+const CONFIG = {
+  CLIENT_ID: '381548887057-naqvgf4tple4319vo1jup3v951tdm2aj.apps.googleusercontent.com',
+  API_KEY:   'AIzaSyCOacW2XjmU0A_rzPJVs2xJuYYpBWjMoLw',
+  FOLDER_NAME: 'BakeryOrderManager',
+  DATA_FILE:   'bakery_orders.json',
+  IMG_FOLDER:  'order_images',
+  SCOPES: 'https://www.googleapis.com/auth/drive.file'
+};
+
+// ════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════
+let orders = [];
+let currentImgData = null;
+let currentImgFileObj = null;
+let editImgData = null;
+let editImgFileObj = null;
+let driveReady = false;
+let tokenClient = null;
+let accessToken = null;
+let folderId = null;
+let imgFolderId = null;
+let dataFileId = null;
+let isSyncing = false;
+let pendingSync = false;
+
+// ════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════
+window.onload = async () => {
+  document.getElementById('orderReceived').value = today();
+  loadLocal();
+  renderAll();
+  setupDrag();
+  showSetupBanner();
+  await initGapi();
+};
+
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function loadLocal() {
+  try { orders = JSON.parse(localStorage.getItem('bakery_orders') || '[]'); } catch(e) { orders = []; }
+}
+function saveLocal() {
+  localStorage.setItem('bakery_orders', JSON.stringify(orders));
+}
+
+// ════════════════════════════════════════════════════
+// SETUP BANNER
+// ════════════════════════════════════════════════════
+function showSetupBanner() {
+  const isConfigured = CONFIG.CLIENT_ID !== 'YOUR_GOOGLE_CLIENT_ID';
+  if (isConfigured) { document.getElementById('setupBanner').innerHTML = ''; return; }
+  document.getElementById('setupBanner').innerHTML = `
+    <div class="setup-banner">
+      <div class="setup-icon">☁️</div>
+      <div>
+        <h3>ตั้งค่า Google Drive</h3>
+        <p>เพื่อเก็บข้อมูลออเดอร์บน Google Drive ของคุณ ต้องใส่ Google API credentials ใน <code>index.html</code> ก่อน</p>
+        <ul class="setup-steps">
+          <li>ไปที่ <a href="https://console.cloud.google.com" target="_blank" style="color:var(--caramel)">console.cloud.google.com</a></li>
+          <li>สร้าง Project → เปิด Google Drive API</li>
+          <li>สร้าง OAuth 2.0 Client ID (Web application)</li>
+          <li>สร้าง API Key → Restrict to Drive API</li>
+          <li>ใส่ <strong>CLIENT_ID</strong> และ <strong>API_KEY</strong> ใน CONFIG ด้านบนของ script</li>
+          <li>ข้อมูลและรูปภาพจะ sync/อัปโหลดเข้า Google Drive ทุกครั้งที่มีการเปลี่ยนแปลง</li>
+        </ul>
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════
+// GOOGLE API INIT
+// ════════════════════════════════════════════════════
+async function initGapi() {
+  if (CONFIG.CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
+    setSyncStatus('offline', 'ยังไม่ได้ตั้งค่า Google Drive');
+    return;
+  }
+  try {
+    await new Promise(r => gapi.load('client', r));
+    await gapi.client.init({ apiKey: CONFIG.API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.CLIENT_ID,
+      scope: CONFIG.SCOPES,
+      callback: async (resp) => {
+        if (resp.error) { setSyncStatus('error', 'ล็อกอินไม่สำเร็จ'); return; }
+        accessToken = resp.access_token;
+        gapi.client.setToken({ access_token: accessToken });
+        driveReady = true;
+        setSyncStatus('syncing', 'กำลังโหลดข้อมูลจาก Drive...');
+        await ensureFolders();
+        await loadFromDrive();
+      }
+    });
+    setSyncStatus('offline', 'คลิก Sync เพื่อเชื่อมต่อ Google Drive');
+    document.getElementById('syncBtn').textContent = '🔑 เชื่อมต่อ';
+  } catch(e) {
+    setSyncStatus('error', 'โหลด Google API ไม่สำเร็จ');
+  }
+}
+
+async function manualSync() {
+  if (!driveReady) {
+    if (!tokenClient) return;
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+    return;
+  }
+  await saveToDrive();
+}
+
+// ════════════════════════════════════════════════════
+// DRIVE: FOLDER/FILE MANAGEMENT
+// ════════════════════════════════════════════════════
+async function ensureFolders() {
+  // Main folder
+  let res = await gapi.client.drive.files.list({
+    q: `name='${CONFIG.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: 'files(id)'
+  });
+  if (res.result.files.length > 0) {
+    folderId = res.result.files[0].id;
+  } else {
+    let cr = await gapi.client.drive.files.create({
+      resource: { name: CONFIG.FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' },
+      fields: 'id'
+    });
+    folderId = cr.result.id;
+  }
+  // Image subfolder
+  res = await gapi.client.drive.files.list({
+    q: `name='${CONFIG.IMG_FOLDER}' and mimeType='application/vnd.google-apps.folder' and '${folderId}' in parents and trashed=false`,
+    fields: 'files(id)'
+  });
+  if (res.result.files.length > 0) {
+    imgFolderId = res.result.files[0].id;
+  } else {
+    let cr = await gapi.client.drive.files.create({
+      resource: { name: CONFIG.IMG_FOLDER, mimeType: 'application/vnd.google-apps.folder', parents: [folderId] },
+      fields: 'id'
+    });
+    imgFolderId = cr.result.id;
+  }
+  // Data file ID
+  res = await gapi.client.drive.files.list({
+    q: `name='${CONFIG.DATA_FILE}' and '${folderId}' in parents and trashed=false`,
+    fields: 'files(id)'
+  });
+  if (res.result.files.length > 0) dataFileId = res.result.files[0].id;
+}
+
+// ════════════════════════════════════════════════════
+// DRIVE: LOAD
+// ════════════════════════════════════════════════════
+async function loadFromDrive() {
+  if (!dataFileId) {
+    setSyncStatus('ok', `เชื่อมต่อแล้ว · ยังไม่มีข้อมูล`);
+    return;
+  }
+  try {
+    setSyncStatus('syncing', 'กำลังโหลด...');
+    const res = await gapi.client.drive.files.get({ fileId: dataFileId, alt: 'media' });
+    const driveOrders = JSON.parse(res.body);
+    // Merge: drive wins on conflict by createdAt
+    const merged = mergeOrders(orders, driveOrders);
+    orders = merged;
+    saveLocal();
+    renderAll();
+    setSyncStatus('ok', `sync แล้ว · ${fmtTime(new Date())}`);
+  } catch(e) {
+    setSyncStatus('error', 'โหลดจาก Drive ไม่สำเร็จ');
+  }
+}
+
+function mergeOrders(local, remote) {
+  const map = new Map();
+  [...local, ...remote].forEach(o => {
+    if (!map.has(o.id) || new Date(o.updatedAt||o.createdAt) > new Date(map.get(o.id).updatedAt||map.get(o.id).createdAt)) {
+      map.set(o.id, o);
+    }
+  });
+  return Array.from(map.values());
+}
+
+// ════════════════════════════════════════════════════
+// DRIVE: SAVE
+// ════════════════════════════════════════════════════
+async function saveToDrive() {
+  if (!driveReady || isSyncing) { pendingSync = true; return; }
+  isSyncing = true;
+  setSyncStatus('syncing', 'กำลัง sync...');
+  try {
+    // Strip large base64 images from JSON — store separately
+    const ordersForDrive = orders.map(o => ({ ...o, img: o.driveImgId ? null : o.img }));
+    const body = JSON.stringify(ordersForDrive);
+    if (!dataFileId) {
+      const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: buildMultipart(CONFIG.DATA_FILE, 'application/json', body, folderId)
+      });
+      const j = await res.json();
+      dataFileId = j.id;
+    } else {
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${dataFileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body
+      });
+    }
+    setSyncStatus('ok', `sync แล้ว · ${fmtTime(new Date())}`);
+  } catch(e) {
+    setSyncStatus('error', 'sync ไม่สำเร็จ — ข้อมูลบันทึกใน browser แล้ว');
+  }
+  isSyncing = false;
+  if (pendingSync) { pendingSync = false; saveToDrive(); }
+}
+
+// Upload image to Drive, return file metadata
+async function uploadImgToDrive(orderId, imageObj) {
+  if (!driveReady || !imgFolderId || !imageObj) return null;
+  try {
+    const ext = imageObj.ext || 'jpg';
+    const mime = imageObj.mime || 'image/jpeg';
+    const name = `order_${orderId}_${Date.now()}.${ext}`;
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink,webContentLink,thumbnailLink', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: buildMultipart(name, mime, imageObj.blob, imgFolderId, true)
+    });
+    if (!res.ok) throw new Error('Upload failed');
+    return await res.json();
+  } catch(e) {
+    console.error(e);
+    return null;
+  }
+}
+
+function b64ToBlob(b64) {
+  const parts = b64.split(','); const mime = parts[0].match(/:(.*?);/)[1];
+  const bstr = atob(parts[1]); let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  return new Blob([u8arr], { type: mime });
+}
+
+function buildMultipart(name, mime, body, parentId, isBlob = false) {
+  const boundary = 'bak3ry_boundary';
+  const meta = JSON.stringify({ name, parents: [parentId] });
+  const enc = new TextEncoder();
+  const parts = [
+    enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n`),
+    enc.encode(`--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`),
+    isBlob ? body : enc.encode(body),
+    enc.encode(`\r\n--${boundary}--`)
+  ];
+  const blob = new Blob(parts, { type: `multipart/related; boundary=${boundary}` });
+  return blob;
+}
+
+// ════════════════════════════════════════════════════
+// SYNC STATUS UI
+// ════════════════════════════════════════════════════
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
+  const btn = document.getElementById('syncBtn');
+  dot.className = `sync-dot ${state}`;
+  txt.textContent = msg;
+  if (state === 'syncing') {
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  } else {
+    btn.disabled = false;
+    btn.textContent = driveReady ? '🔄 Sync' : '🔑 เชื่อมต่อ';
+  }
+}
+
+function fmtTime(d) {
+  return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ════════════════════════════════════════════════════
+// SAVE (local + drive)
+// ════════════════════════════════════════════════════
+function save() {
+  saveLocal();
+  updateBadges();
+  saveToDrive();
+}
+
+function updateBadges() {
+  document.getElementById('trackBadge').textContent = orders.filter(o => o.status === 'active').length;
+  document.getElementById('doneBadge').textContent = orders.filter(o => o.status === 'done').length;
+}
+
+function renderAll() { renderTrack(); renderDone(); updateBadges(); }
+
+// ════════════════════════════════════════════════════
+// PAGE NAV
+// ════════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const map = { create: 0, track: 1, done: 2 };
+  tabs[map[id]].classList.add('active');
+  if (id === 'track') renderTrack();
+  if (id === 'done') renderDone();
+}
+
+// ════════════════════════════════════════════════════
+// IMAGE UPLOAD
+// ════════════════════════════════════════════════════
+const MAX_IMG_SIDE = 1600;
+const IMG_QUALITY = 0.86;
+
+async function makeImageObject(file, previewImgId, previewWrapId) {
+  if (!file) return null;
+
+  const originalName = file.name || `order_${Date.now()}.jpg`;
+  let blob = file;
+  let mime = file.type || 'image/jpeg';
+  let dataUrl = null;
+
+  // พยายามย่อ/บีบอัดรูปจากกล้องมือถือให้เล็กลงก่อนอัปโหลดขึ้น server
+  // ถ้าเป็นไฟล์ที่ browser อ่านไม่ได้ เช่น HEIC บางเครื่อง จะ fallback เป็นไฟล์เดิมเพื่อให้ยังอัปโหลดได้
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMG_SIDE / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', IMG_QUALITY));
+    mime = 'image/jpeg';
+    dataUrl = canvas.toDataURL('image/jpeg', IMG_QUALITY);
+    bitmap.close && bitmap.close();
+  } catch (err) {
+    dataUrl = await fileToDataURL(file);
+  }
+
+  const obj = {
+    blob,
+    dataUrl,
+    mime,
+    originalName,
+    ext: mime.includes('png') ? 'png' : (mime.includes('heic') || originalName.toLowerCase().endsWith('.heic') ? 'heic' : 'jpg'),
+    size: blob.size || file.size || 0
+  };
+
+  const imgEl = document.getElementById(previewImgId);
+  const wrapEl = document.getElementById(previewWrapId);
+  if (imgEl && wrapEl) {
+    imgEl.src = obj.dataUrl;
+    wrapEl.style.display = previewWrapId === 'imgPreview' ? 'inline-block' : 'block';
+  }
+  return obj;
+}
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => resolve(ev.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleImg(e) {
+  const file = e.target.files[0]; if (!file) return;
+  currentImgFileObj = await makeImageObject(file, 'imgPreviewEl', 'imgPreview');
+  currentImgData = currentImgFileObj ? currentImgFileObj.dataUrl : null;
+  if (currentImgFileObj && !driveReady) toast('📷 เลือกรูปแล้ว · กดเชื่อมต่อ Google Drive ก่อนสร้าง เพื่อเก็บรูปบน server');
+}
+
+function removeImg() {
+  currentImgData = null;
+  currentImgFileObj = null;
+  document.getElementById('imgPreview').style.display = 'none';
+  document.getElementById('orderImg').value = '';
+}
+
+async function handleEditImg(e) {
+  const file = e.target.files[0]; if (!file) return;
+  editImgFileObj = await makeImageObject(file, 'editImgPreview', 'editImgPreviewWrap');
+  editImgData = editImgFileObj ? editImgFileObj.dataUrl : null;
+  if (editImgFileObj && !driveReady) toast('📷 เลือกรูปแล้ว · ต้องเชื่อมต่อ Google Drive ก่อนบันทึกรูปขึ้น server');
+}
+
+function setupDrag() {
+  const z = document.getElementById('uploadZone');
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('dragover'); });
+  z.addEventListener('dragleave', () => z.classList.remove('dragover'));
+  z.addEventListener('drop', async e => {
+    e.preventDefault(); z.classList.remove('dragover');
+    const file = e.dataTransfer.files[0]; if (!file) return;
+    currentImgFileObj = await makeImageObject(file, 'imgPreviewEl', 'imgPreview');
+    currentImgData = currentImgFileObj ? currentImgFileObj.dataUrl : null;
+    if (currentImgFileObj && !driveReady) toast('📷 เลือกรูปแล้ว · กดเชื่อมต่อ Google Drive ก่อนสร้าง เพื่อเก็บรูปบน server');
+  });
+}
+
+// ════════════════════════════════════════════════════
+// CREATE ORDER
+// ════════════════════════════════════════════════════
+async function createOrder() {
+  const name = document.getElementById('orderName').value.trim();
+  const received = document.getElementById('orderReceived').value;
+  const delivery = document.getElementById('orderDelivery').value;
+  if (!name) return toast('⚠️ กรุณาใส่ชื่อออเดอร์');
+  if (!received) return toast('⚠️ กรุณาเลือกวันรับออเดอร์');
+  if (!delivery) return toast('⚠️ กรุณาเลือกวันส่ง/รับสินค้า');
+
+  const btn = document.getElementById('createBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> กำลังสร้าง...';
+
+  if (currentImgFileObj && !driveReady) {
+    btn.disabled = false; btn.innerHTML = '🥐 สร้างออเดอร์';
+    return toast('⚠️ กรุณากดเชื่อมต่อ Google Drive ก่อน เพื่อเก็บรูปบน server จริง');
+  }
+
+  const id = Date.now().toString();
+  const order = {
+    id, name, received, delivery,
+    img: null,
+    driveImgId: null,
+    driveImgLink: null,
+    driveImgName: null,
+    driveImgMime: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    status: 'active'
+  };
+
+  // Upload image to Drive server before saving order
+  if (currentImgFileObj && driveReady) {
+    setSyncStatus('syncing', 'กำลังอัปโหลดรูปขึ้น server...');
+    const result = await uploadImgToDrive(id, currentImgFileObj);
+    if (result && result.id) {
+      order.driveImgId = result.id;
+      order.driveImgLink = result.webViewLink || result.webContentLink || null;
+      order.driveImgName = result.name || null;
+      order.driveImgMime = result.mimeType || currentImgFileObj.mime || null;
+    } else {
+      btn.disabled = false; btn.innerHTML = '🥐 สร้างออเดอร์';
+      setSyncStatus('error', 'อัปโหลดรูปไม่สำเร็จ');
+      return toast('❌ อัปโหลดรูปขึ้น server ไม่สำเร็จ กรุณาลอง Sync/เชื่อมต่อใหม่');
+    }
+  }
+
+  orders.push(order);
+  save();
+  toast('✅ สร้างออเดอร์สำเร็จ!');
+  resetForm();
+  btn.disabled = false; btn.innerHTML = '🥐 สร้างออเดอร์';
+  showPage('track');
+}
+
+function resetForm() {
+  document.getElementById('orderName').value = '';
+  document.getElementById('orderReceived').value = today();
+  document.getElementById('orderDelivery').value = '';
+  currentImgData = null;
+  currentImgFileObj = null;
+  document.getElementById('imgPreview').style.display = 'none';
+  document.getElementById('orderImg').value = '';
+}
+
+// ════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════
+function thDate(iso) {
+  if (!iso) return '-';
+  const [y,m,d] = iso.split('-');
+  const months = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${parseInt(d)} ${months[parseInt(m)]} ${parseInt(y)+543}`;
+}
+function daysAgo(isoDate) {
+  const diff = Math.floor((new Date() - new Date(isoDate)) / 86400000);
+  if (diff === 0) return 'วันนี้'; if (diff === 1) return 'เมื่อวาน';
+  return `${diff} วันที่แล้ว`;
+}
+function daysUntil(isoDate) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const diff = Math.floor((new Date(isoDate + 'T00:00:00') - now) / 86400000);
+  if (diff < 0) return `⚠️ เกินกำหนด ${Math.abs(diff)} วัน`;
+  if (diff === 0) return '🚨 ส่งวันนี้!';
+  if (diff === 1) return '⏰ พรุ่งนี้';
+  return `📅 อีก ${diff} วัน`;
+}
+function isLate(isoDate) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  return new Date(isoDate + 'T00:00:00') < now;
+}
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function imgBtn(o) {
+  if (o.driveImgId) return `<button class="btn btn-ghost btn-sm" onclick="viewImg('${o.id}')">🖼️ ดูใบสั่ง</button>`;
+  if (o.driveImgLink) return `<a class="btn btn-ghost btn-sm drive-link" href="${o.driveImgLink}" target="_blank">🖼️ ดูใบสั่ง (Drive)</a>`;
+  if (o.img) return `<button class="btn btn-ghost btn-sm" onclick="viewImg('${o.id}')">🖼️ ดูใบสั่ง</button>`;
+  return '';
+}
+
+// ════════════════════════════════════════════════════
+// RENDER TRACK
+// ════════════════════════════════════════════════════
+function renderTrack() {
+  const list = document.getElementById('trackList');
+  const active = orders.filter(o => o.status === 'active').sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+  if (!active.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">ยังไม่มีออเดอร์</div><div class="empty-sub">กดสร้างออเดอร์ใหม่ได้เลย!</div></div>`;
+    return;
+  }
+  list.innerHTML = active.map(o => {
+    const late = isLate(o.delivery);
+    return `<div class="order-card">
+      <div class="order-card-header">
+        <div>
+          <div class="order-name">${escHtml(o.name)}</div>
+          <div class="order-id">#${o.id} · รับเมื่อ ${daysAgo(o.createdAt)}</div>
+        </div>
+        <span class="status-badge ${late ? 'status-late' : 'status-new'}">${late ? '⚠️ เกินกำหนด' : '🟢 กำลังดำเนินการ'}</span>
+      </div>
+      <div class="order-card-body">
+        <div class="order-meta">
+          <div class="meta-item"><span class="meta-label">📥 วันรับ:</span><span class="meta-value">${thDate(o.received)}</span></div>
+          <div class="meta-item"><span class="meta-label">🚚 วันส่ง:</span><span class="meta-value ${late?'late':''}">${thDate(o.delivery)}</span><span class="days-ago">${daysUntil(o.delivery)}</span></div>
+          <div class="meta-item"><span class="meta-label">🕐 สร้างเมื่อ:</span><span class="meta-value">${daysAgo(o.createdAt)}</span></div>
+        </div>
+        <div class="order-actions">
+          ${imgBtn(o)}
+          <button class="btn btn-success btn-sm" onclick="markDone('${o.id}')">✅ เสร็จสิ้น</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEdit('${o.id}')">✏️ แก้ไข</button>
+          <button class="btn btn-danger btn-sm" onclick="cancelOrder('${o.id}')">✕ ยกเลิก</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════
+// RENDER DONE
+// ════════════════════════════════════════════════════
+function renderDone() {
+  const actEl = document.getElementById('doneActions');
+  const list = document.getElementById('doneList');
+  const done = orders.filter(o => o.status === 'done').sort((a,b) => new Date(b.doneAt) - new Date(a.doneAt));
+  if (!done.length) {
+    actEl.innerHTML = '';
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🎂</div><div class="empty-text">ยังไม่มีออเดอร์เสร็จสิ้น</div></div>`;
+    return;
+  }
+  actEl.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📊 Export CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportImg()">🖼️ Export รูปภาพ</button>
+    <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑️ ล้างทั้งหมด</button>`;
+  list.innerHTML = done.map(o => `
+    <div class="done-card">
+      <div class="done-header">
+        <div><div class="done-name">${escHtml(o.name)}</div><div class="order-id">#${o.id}</div></div>
+        <span class="done-badge">✅ เสร็จสิ้น</span>
+      </div>
+      <div class="done-body">
+        <div class="done-meta">
+          <div class="meta-item"><span class="meta-label">📥 วันรับ:</span><span class="meta-value">${thDate(o.received)}</span></div>
+          <div class="meta-item"><span class="meta-label">🚚 วันส่ง:</span><span class="meta-value">${thDate(o.delivery)}</span></div>
+          <div class="meta-item"><span class="meta-label">✅ เสร็จเมื่อ:</span><span class="meta-value">${thDate(o.doneAt?o.doneAt.split('T')[0]:'')}</span></div>
+        </div>
+        ${o.driveImgLink||o.img ? `<div style="margin-top:10px">${imgBtn(o)}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════
+// ORDER ACTIONS
+// ════════════════════════════════════════════════════
+function markDone(id) {
+  const o = orders.find(x=>x.id===id); if(!o) return;
+  o.status='done'; o.doneAt=new Date().toISOString(); o.updatedAt=new Date().toISOString();
+  save(); renderAll(); toast('🎉 ออเดอร์เสร็จสิ้น!');
+}
+function cancelOrder(id) {
+  if(!confirm('ยืนยันการยกเลิกออเดอร์นี้?')) return;
+  orders=orders.filter(x=>x.id!==id);
+  save(); renderTrack(); toast('🗑️ ยกเลิกออเดอร์แล้ว');
+}
+function clearAll() {
+  if(!confirm('ลบออเดอร์ที่เสร็จสิ้นทั้งหมด?')) return;
+  orders=orders.filter(o=>o.status!=='done');
+  save(); renderDone(); toast('🗑️ ล้างข้อมูลแล้ว');
+}
+
+// ════════════════════════════════════════════════════
+// EDIT MODAL
+// ════════════════════════════════════════════════════
+function openEdit(id) {
+  const o=orders.find(x=>x.id===id); if(!o) return;
+  document.getElementById('editId').value=id;
+  document.getElementById('editName').value=o.name;
+  document.getElementById('editReceived').value=o.received;
+  document.getElementById('editDelivery').value=o.delivery;
+  editImgData=null;
+  editImgFileObj=null;
+  document.getElementById('editImgPreviewWrap').style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEditModal(e) {
+  if(e&&e.target!==document.getElementById('editModal')) return;
+  document.getElementById('editModal').classList.remove('open');
+}
+async function saveEdit() {
+  const id=document.getElementById('editId').value;
+  const o=orders.find(x=>x.id===id); if(!o) return;
+  o.name=document.getElementById('editName').value.trim()||o.name;
+  o.received=document.getElementById('editReceived').value||o.received;
+  o.delivery=document.getElementById('editDelivery').value||o.delivery;
+  o.updatedAt=new Date().toISOString();
+  if(editImgFileObj) {
+    if(!driveReady) return toast('⚠️ กรุณากดเชื่อมต่อ Google Drive ก่อน เพื่อเก็บรูปบน server จริง');
+    setSyncStatus('syncing','กำลังอัปโหลดรูปใหม่ขึ้น server...');
+    const result=await uploadImgToDrive(id,editImgFileObj);
+    if(result&&result.id) {
+      o.driveImgId=result.id;
+      o.driveImgLink=result.webViewLink || result.webContentLink || null;
+      o.driveImgName=result.name || null;
+      o.driveImgMime=result.mimeType || editImgFileObj.mime || null;
+      o.img=null;
+    } else {
+      setSyncStatus('error','อัปโหลดรูปใหม่ไม่สำเร็จ');
+      return toast('❌ อัปโหลดรูปใหม่ขึ้น server ไม่สำเร็จ');
+    }
+  }
+  save(); renderTrack();
+  document.getElementById('editModal').classList.remove('open');
+  toast('✅ แก้ไขออเดอร์แล้ว');
+}
+
+// ════════════════════════════════════════════════════
+// IMG MODAL
+// ════════════════════════════════════════════════════
+async function viewImg(id) {
+  const o=orders.find(x=>x.id===id);
+  if(!o) return toast('ไม่มีรูปภาพ');
+  if(o.img) {
+    document.getElementById('modalImg').src=o.img;
+    document.getElementById('imgModal').classList.add('open');
+    return;
+  }
+  if(o.driveImgId) {
+    if(!driveReady || !accessToken) return toast('กรุณากดเชื่อมต่อ Google Drive ก่อนดูรูป');
+    try {
+      setSyncStatus('syncing','กำลังโหลดรูปจาก server...');
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${o.driveImgId}?alt=media`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if(!res.ok) throw new Error('Cannot load image');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      document.getElementById('modalImg').src=url;
+      document.getElementById('imgModal').classList.add('open');
+      setSyncStatus('ok', `โหลดรูปแล้ว · ${fmtTime(new Date())}`);
+      return;
+    } catch(e) {
+      setSyncStatus('error','โหลดรูปจาก server ไม่สำเร็จ');
+      return toast('❌ โหลดรูปจาก server ไม่สำเร็จ');
+    }
+  }
+  return toast('ไม่มีรูปภาพ');
+}
+function closeImgModal(e) {
+  if(e&&e.target!==document.getElementById('imgModal')) return;
+  const img = document.getElementById('modalImg');
+  if (img.src && img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+  img.src = '';
+  document.getElementById('imgModal').classList.remove('open');
+}
+
+// ════════════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════════════
+function exportCSV() {
+  const done=orders.filter(o=>o.status==='done');
+  if(!done.length) return toast('ไม่มีข้อมูล');
+  const header=['ID','ชื่อออเดอร์','วันรับออเดอร์','วันส่ง','วันเสร็จสิ้น','Drive Image'];
+  const rows=done.map(o=>[o.id,`"${o.name}"`,o.received,o.delivery,o.doneAt?o.doneAt.split('T')[0]:'',o.driveImgLink||'']);
+  const csv='\uFEFF'+[header,...rows].map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`bakery_orders_${today()}.csv`; a.click();
+  toast('📊 Export CSV สำเร็จ');
+}
+function exportImg() {
+  const done=orders.filter(o=>o.status==='done');
+  if(!done.length) return toast('ไม่มีข้อมูล');
+  const canvas=document.createElement('canvas');
+  const W=700,ROW=72,HEADER=100,PAD=32;
+  canvas.width=W; canvas.height=HEADER+done.length*ROW+PAD;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#FDF6EC'; ctx.fillRect(0,0,W,canvas.height);
+  ctx.fillStyle='#5C3D1E'; ctx.fillRect(0,0,W,HEADER);
+  ctx.fillStyle='#E8A020'; ctx.font='bold 22px serif';
+  ctx.fillText('🥐 Bakery Order Manager — รายการเสร็จสิ้น',24,42);
+  ctx.fillStyle='#D4B896'; ctx.font='13px sans-serif';
+  ctx.fillText(`Export ${new Date().toLocaleDateString('th-TH')} · ${done.length} รายการ`,24,68);
+  ctx.fillStyle='#C8860A'; ctx.fillRect(0,HEADER-4,W,4);
+  done.forEach((o,i)=>{
+    const y=HEADER+i*ROW;
+    ctx.fillStyle=i%2===0?'#FEFCF8':'#F9F0E4'; ctx.fillRect(0,y,W,ROW);
+    ctx.fillStyle='#5C3D1E'; ctx.font='bold 15px sans-serif'; ctx.fillText(o.name,20,y+24);
+    ctx.fillStyle='#888'; ctx.font='12px sans-serif';
+    ctx.fillText(`📥 ${o.received}  🚚 ${o.delivery}  ✅ ${o.doneAt?o.doneAt.split('T')[0]:'-'}`,20,y+46);
+    ctx.strokeStyle='#D4B896'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(0,y+ROW-0.5); ctx.lineTo(W,y+ROW-0.5); ctx.stroke();
+  });
+  const a=document.createElement('a');
+  a.href=canvas.toDataURL('image/png');
+  a.download=`bakery_orders_${today()}.png`; a.click();
+  toast('🖼️ Export รูปสำเร็จ');
+}
+
+// ════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════
+let toastT;
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2600);
+}
+</script>
+</body>
+</html>
