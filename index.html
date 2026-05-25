@@ -112,10 +112,6 @@
   .upload-icon { font-size: 36px; margin-bottom: 8px; }
   .upload-text { color: var(--gray); font-size: 14px; }
   .upload-hint { color: var(--brown-pale); font-size: 12px; margin-top: 4px; }
-  .ocr-actions { margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .ocr-status { font-size: 12px; color: var(--brown-light); min-height: 18px; }
-  .ocr-status.error { color: var(--red); }
-  .ocr-status.ok { color: var(--green); }
   .img-preview { margin-top: 14px; position: relative; display: inline-block; }
   .img-preview img { max-width: 100%; max-height: 200px; border-radius: 10px; border: 2px solid var(--caramel-light); display: block; }
   .img-preview .remove-img {
@@ -301,11 +297,6 @@
       padding: 26px 12px;
       min-height: 132px;
     }
-    .ocr-actions {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
     .upload-icon { font-size: 34px; }
     .img-preview {
       display: block !important;
@@ -478,10 +469,6 @@
         <img id="imgPreviewEl" src="" alt="preview" />
         <button class="remove-img" onclick="removeImg()">✕</button>
       </div>
-      <div class="ocr-actions">
-        <button class="btn btn-ghost btn-sm" id="ocrBtn" onclick="readOrderNameFromImage()" disabled>🔎 อ่านชื่อจากรูป</button>
-        <span class="ocr-status" id="ocrStatus">OCR จะทำงานหลังเลือกรูป</span>
-      </div>
     </div>
     <hr class="divider">
     <div class="btn-row">
@@ -550,10 +537,6 @@
       <div id="editImgPreviewWrap" style="margin-top:10px;display:none">
         <img id="editImgPreview" src="" style="max-height:120px;border-radius:8px;border:2px solid var(--caramel-light)" />
       </div>
-      <div class="ocr-actions">
-        <button class="btn btn-ghost btn-sm" id="editOcrBtn" onclick="readEditOrderNameFromImage()" disabled>🔎 อ่านชื่อจากรูป</button>
-        <span class="ocr-status" id="editOcrStatus">OCR จะทำงานหลังเลือกรูปใหม่</span>
-      </div>
     </div>
     <div class="btn-row">
       <button class="btn btn-ghost" onclick="closeEditModal()">ยกเลิก</button>
@@ -567,7 +550,6 @@
 <!-- Google API -->
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="https://accounts.google.com/gsi/client"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <script>
 // ════════════════════════════════════════════════════
@@ -598,7 +580,6 @@ let imgFolderId = null;
 let dataFileId = null;
 let isSyncing = false;
 let pendingSync = false;
-let isOcrRunning = false;
 
 // ════════════════════════════════════════════════════
 // INIT
@@ -949,7 +930,6 @@ async function handleImg(e) {
   const file = e.target.files[0]; if (!file) return;
   currentImgFileObj = await makeImageObject(file, 'imgPreviewEl', 'imgPreview');
   currentImgData = currentImgFileObj ? currentImgFileObj.dataUrl : null;
-  setOcrReady('create', !!currentImgFileObj);
   if (currentImgFileObj && !driveReady) toast('📷 เลือกรูปแล้ว · กดเชื่อมต่อ Google Drive ก่อนสร้าง เพื่อเก็บรูปบน server');
 }
 
@@ -958,14 +938,12 @@ function removeImg() {
   currentImgFileObj = null;
   document.getElementById('imgPreview').style.display = 'none';
   document.getElementById('orderImg').value = '';
-  setOcrReady('create', false);
 }
 
 async function handleEditImg(e) {
   const file = e.target.files[0]; if (!file) return;
   editImgFileObj = await makeImageObject(file, 'editImgPreview', 'editImgPreviewWrap');
   editImgData = editImgFileObj ? editImgFileObj.dataUrl : null;
-  setOcrReady('edit', !!editImgFileObj);
   if (editImgFileObj && !driveReady) toast('📷 เลือกรูปแล้ว · ต้องเชื่อมต่อ Google Drive ก่อนบันทึกรูปขึ้น server');
 }
 
@@ -978,112 +956,8 @@ function setupDrag() {
     const file = e.dataTransfer.files[0]; if (!file) return;
     currentImgFileObj = await makeImageObject(file, 'imgPreviewEl', 'imgPreview');
     currentImgData = currentImgFileObj ? currentImgFileObj.dataUrl : null;
-    setOcrReady('create', !!currentImgFileObj);
     if (currentImgFileObj && !driveReady) toast('📷 เลือกรูปแล้ว · กดเชื่อมต่อ Google Drive ก่อนสร้าง เพื่อเก็บรูปบน server');
   });
-}
-
-
-// ════════════════════════════════════════════════════
-// OCR: READ ORDER NAME FROM IMAGE
-// ════════════════════════════════════════════════════
-function setOcrReady(mode, ready) {
-  const btnId = mode === 'edit' ? 'editOcrBtn' : 'ocrBtn';
-  const statusId = mode === 'edit' ? 'editOcrStatus' : 'ocrStatus';
-  const btn = document.getElementById(btnId);
-  const status = document.getElementById(statusId);
-  if (btn) btn.disabled = !ready || isOcrRunning;
-  if (status) {
-    status.className = 'ocr-status';
-    status.textContent = ready ? 'กดปุ่มเพื่ออ่านชื่อออเดอร์จากรูป' : (mode === 'edit' ? 'OCR จะทำงานหลังเลือกรูปใหม่' : 'OCR จะทำงานหลังเลือกรูป');
-  }
-}
-
-function setOcrStatus(mode, msg, type = '') {
-  const statusId = mode === 'edit' ? 'editOcrStatus' : 'ocrStatus';
-  const status = document.getElementById(statusId);
-  if (!status) return;
-  status.className = `ocr-status ${type}`.trim();
-  status.textContent = msg;
-}
-
-function extractOrderNameFromOcr(text) {
-  const rawLines = (text || '')
-    .split(/\r?\n/)
-    .map(line => line.replace(/[|_•·]+/g, ' ').replace(/\s+/g, ' ').trim())
-    .filter(Boolean);
-
-  const labelPatterns = [
-    /^(ชื่อ\s*(ออเดอร์|ออร์เดอร์|order)?|order\s*name|name)\s*[:：\-]?\s*/i,
-    /^(รายการ|สินค้า|เมนู)\s*[:：\-]?\s*/i
-  ];
-
-  for (const line of rawLines) {
-    for (const p of labelPatterns) {
-      if (p.test(line)) {
-        const candidate = line.replace(p, '').trim();
-        if (candidate.length >= 2) return candidate.slice(0, 90);
-      }
-    }
-  }
-
-  const badWords = /(โทร|tel|phone|วันที่|วันส่ง|เวลา|ราคา|บาท|รวม|จำนวน|qty|total|date|time|address|ที่อยู่)/i;
-  const dateLike = /(\d{1,2}[\/\-.]\d{1,2}|\d{1,2}:\d{2}|\d+\s*(บาท|ชิ้น|pcs?))/i;
-  const useful = rawLines.find(line =>
-    line.length >= 3 &&
-    /[ก-๙A-Za-z]/.test(line) &&
-    !badWords.test(line) &&
-    !dateLike.test(line)
-  );
-  return useful ? useful.slice(0, 90) : '';
-}
-
-async function runOcrForImage(imageObj, targetInputId, mode) {
-  if (!imageObj) return toast('⚠️ กรุณาเลือกรูปก่อน');
-  if (!window.Tesseract) return toast('❌ โหลด OCR ไม่สำเร็จ กรุณาต่ออินเทอร์เน็ตแล้วเปิดหน้าใหม่');
-  if (isOcrRunning) return;
-
-  isOcrRunning = true;
-  const btn = document.getElementById(mode === 'edit' ? 'editOcrBtn' : 'ocrBtn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> กำลังอ่าน...'; }
-
-  try {
-    setOcrStatus(mode, 'กำลังโหลด OCR ภาษาไทย/อังกฤษ...');
-    const result = await Tesseract.recognize(imageObj.blob || imageObj.dataUrl, 'tha+eng', {
-      logger: m => {
-        if (m.status === 'recognizing text' && typeof m.progress === 'number') {
-          setOcrStatus(mode, `กำลังอ่านตัวอักษร ${Math.round(m.progress * 100)}%`);
-        }
-      }
-    });
-    const foundName = extractOrderNameFromOcr(result.data.text);
-    if (!foundName) {
-      setOcrStatus(mode, 'อ่านได้ไม่ชัด กรุณาพิมพ์ชื่อเองหรือลองถ่ายรูปใหม่', 'error');
-      toast('⚠️ OCR อ่านชื่อไม่ชัด');
-      return;
-    }
-    document.getElementById(targetInputId).value = foundName;
-    setOcrStatus(mode, `เติมชื่อแล้ว: ${foundName}`, 'ok');
-    toast('✅ OCR เติมชื่อออเดอร์แล้ว');
-  } catch (err) {
-    console.error(err);
-    setOcrStatus(mode, 'OCR ไม่สำเร็จ กรุณาลองใหม่หรือพิมพ์ชื่อเอง', 'error');
-    toast('❌ OCR ไม่สำเร็จ');
-  } finally {
-    isOcrRunning = false;
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '🔎 อ่านชื่อจากรูป';
-    }
-  }
-}
-
-function readOrderNameFromImage() {
-  runOcrForImage(currentImgFileObj, 'orderName', 'create');
-}
-
-function readEditOrderNameFromImage() {
-  runOcrForImage(editImgFileObj, 'editName', 'edit');
 }
 
 // ════════════════════════════════════════════════════
@@ -1153,7 +1027,6 @@ function resetForm() {
   currentImgFileObj = null;
   document.getElementById('imgPreview').style.display = 'none';
   document.getElementById('orderImg').value = '';
-  setOcrReady('create', false);
 }
 
 // ════════════════════════════════════════════════════
@@ -1298,7 +1171,6 @@ function openEdit(id) {
   editImgData=null;
   editImgFileObj=null;
   document.getElementById('editImgPreviewWrap').style.display='none';
-  setOcrReady('edit', false);
   document.getElementById('editModal').classList.add('open');
 }
 function closeEditModal(e) {
