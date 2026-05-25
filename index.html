@@ -16,7 +16,10 @@
     --radius: 16px; --radius-sm: 10px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(--brown); min-height: 100vh; }
+  html { width: 100%; overflow-x: hidden; }
+  body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(--brown); min-height: 100vh; width: 100%; overflow-x: hidden; }
+  button, input, textarea, select { font: inherit; }
+  input[type="date"], input[type="time"] { appearance: none; -webkit-appearance: none; }
 
   /* HEADER */
   .app-header {
@@ -96,6 +99,7 @@
   }
   .form-input:focus { border-color: var(--caramel); box-shadow: 0 0 0 3px rgba(200,134,10,0.12); }
   .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .date-row.three-cols { grid-template-columns: 1fr 1fr 0.82fr; }
 
   /* UPLOAD */
   .upload-zone {
@@ -108,6 +112,10 @@
   .upload-icon { font-size: 36px; margin-bottom: 8px; }
   .upload-text { color: var(--gray); font-size: 14px; }
   .upload-hint { color: var(--brown-pale); font-size: 12px; margin-top: 4px; }
+  .ocr-actions { margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .ocr-status { font-size: 12px; color: var(--brown-light); min-height: 18px; }
+  .ocr-status.error { color: var(--red); }
+  .ocr-status.ok { color: var(--green); }
   .img-preview { margin-top: 14px; position: relative; display: inline-block; }
   .img-preview img { max-width: 100%; max-height: 200px; border-radius: 10px; border: 2px solid var(--caramel-light); display: block; }
   .img-preview .remove-img {
@@ -258,6 +266,7 @@
     .page {
       padding: 14px 12px 24px;
       max-width: 100%;
+      overflow-x: hidden;
     }
     .section-title {
       font-size: 21px;
@@ -277,7 +286,8 @@
     .setup-banner .setup-icon { font-size: 26px; }
     .setup-banner p,
     .setup-steps { font-size: 12px; }
-    .date-row {
+    .date-row,
+    .date-row.three-cols {
       grid-template-columns: 1fr;
       gap: 0;
     }
@@ -290,6 +300,11 @@
     .upload-zone {
       padding: 26px 12px;
       min-height: 132px;
+    }
+    .ocr-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
     }
     .upload-icon { font-size: 34px; }
     .img-preview {
@@ -437,7 +452,7 @@
       <label class="form-label">ชื่อออเดอร์ <span class="req">*</span></label>
       <input class="form-input" id="orderName" placeholder="เช่น เค้กวันเกิดคุณแม่, ครัวซองต์ 20 ชิ้น..." />
     </div>
-    <div class="date-row">
+    <div class="date-row three-cols">
       <div class="form-group">
         <label class="form-label">วันรับออเดอร์ <span class="req">*</span></label>
         <input class="form-input" type="date" id="orderReceived" />
@@ -445,6 +460,10 @@
       <div class="form-group">
         <label class="form-label">วันส่ง/รับสินค้า <span class="req">*</span></label>
         <input class="form-input" type="date" id="orderDelivery" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">เวลาส่ง/รับ <span class="req">*</span></label>
+        <input class="form-input" type="time" id="orderDeliveryTime" />
       </div>
     </div>
     <div class="form-group">
@@ -458,6 +477,10 @@
       <div class="img-preview" id="imgPreview" style="display:none">
         <img id="imgPreviewEl" src="" alt="preview" />
         <button class="remove-img" onclick="removeImg()">✕</button>
+      </div>
+      <div class="ocr-actions">
+        <button class="btn btn-ghost btn-sm" id="ocrBtn" onclick="readOrderNameFromImage()" disabled>🔎 อ่านชื่อจากรูป</button>
+        <span class="ocr-status" id="ocrStatus">OCR จะทำงานหลังเลือกรูป</span>
       </div>
     </div>
     <hr class="divider">
@@ -503,7 +526,7 @@
       <label class="form-label">ชื่อออเดอร์</label>
       <input class="form-input" id="editName" />
     </div>
-    <div class="date-row">
+    <div class="date-row three-cols">
       <div class="form-group">
         <label class="form-label">วันรับออเดอร์</label>
         <input class="form-input" type="date" id="editReceived" />
@@ -511,6 +534,10 @@
       <div class="form-group">
         <label class="form-label">วันส่ง/รับสินค้า</label>
         <input class="form-input" type="date" id="editDelivery" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">เวลาส่ง/รับ</label>
+        <input class="form-input" type="time" id="editDeliveryTime" />
       </div>
     </div>
     <div class="form-group">
@@ -522,6 +549,10 @@
       </div>
       <div id="editImgPreviewWrap" style="margin-top:10px;display:none">
         <img id="editImgPreview" src="" style="max-height:120px;border-radius:8px;border:2px solid var(--caramel-light)" />
+      </div>
+      <div class="ocr-actions">
+        <button class="btn btn-ghost btn-sm" id="editOcrBtn" onclick="readEditOrderNameFromImage()" disabled>🔎 อ่านชื่อจากรูป</button>
+        <span class="ocr-status" id="editOcrStatus">OCR จะทำงานหลังเลือกรูปใหม่</span>
       </div>
     </div>
     <div class="btn-row">
@@ -536,6 +567,7 @@
 <!-- Google API -->
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <script>
 // ════════════════════════════════════════════════════
@@ -566,6 +598,7 @@ let imgFolderId = null;
 let dataFileId = null;
 let isSyncing = false;
 let pendingSync = false;
+let isOcrRunning = false;
 
 // ════════════════════════════════════════════════════
 // INIT
@@ -916,6 +949,7 @@ async function handleImg(e) {
   const file = e.target.files[0]; if (!file) return;
   currentImgFileObj = await makeImageObject(file, 'imgPreviewEl', 'imgPreview');
   currentImgData = currentImgFileObj ? currentImgFileObj.dataUrl : null;
+  setOcrReady('create', !!currentImgFileObj);
   if (currentImgFileObj && !driveReady) toast('📷 เลือกรูปแล้ว · กดเชื่อมต่อ Google Drive ก่อนสร้าง เพื่อเก็บรูปบน server');
 }
 
@@ -924,12 +958,14 @@ function removeImg() {
   currentImgFileObj = null;
   document.getElementById('imgPreview').style.display = 'none';
   document.getElementById('orderImg').value = '';
+  setOcrReady('create', false);
 }
 
 async function handleEditImg(e) {
   const file = e.target.files[0]; if (!file) return;
   editImgFileObj = await makeImageObject(file, 'editImgPreview', 'editImgPreviewWrap');
   editImgData = editImgFileObj ? editImgFileObj.dataUrl : null;
+  setOcrReady('edit', !!editImgFileObj);
   if (editImgFileObj && !driveReady) toast('📷 เลือกรูปแล้ว · ต้องเชื่อมต่อ Google Drive ก่อนบันทึกรูปขึ้น server');
 }
 
@@ -942,8 +978,112 @@ function setupDrag() {
     const file = e.dataTransfer.files[0]; if (!file) return;
     currentImgFileObj = await makeImageObject(file, 'imgPreviewEl', 'imgPreview');
     currentImgData = currentImgFileObj ? currentImgFileObj.dataUrl : null;
+    setOcrReady('create', !!currentImgFileObj);
     if (currentImgFileObj && !driveReady) toast('📷 เลือกรูปแล้ว · กดเชื่อมต่อ Google Drive ก่อนสร้าง เพื่อเก็บรูปบน server');
   });
+}
+
+
+// ════════════════════════════════════════════════════
+// OCR: READ ORDER NAME FROM IMAGE
+// ════════════════════════════════════════════════════
+function setOcrReady(mode, ready) {
+  const btnId = mode === 'edit' ? 'editOcrBtn' : 'ocrBtn';
+  const statusId = mode === 'edit' ? 'editOcrStatus' : 'ocrStatus';
+  const btn = document.getElementById(btnId);
+  const status = document.getElementById(statusId);
+  if (btn) btn.disabled = !ready || isOcrRunning;
+  if (status) {
+    status.className = 'ocr-status';
+    status.textContent = ready ? 'กดปุ่มเพื่ออ่านชื่อออเดอร์จากรูป' : (mode === 'edit' ? 'OCR จะทำงานหลังเลือกรูปใหม่' : 'OCR จะทำงานหลังเลือกรูป');
+  }
+}
+
+function setOcrStatus(mode, msg, type = '') {
+  const statusId = mode === 'edit' ? 'editOcrStatus' : 'ocrStatus';
+  const status = document.getElementById(statusId);
+  if (!status) return;
+  status.className = `ocr-status ${type}`.trim();
+  status.textContent = msg;
+}
+
+function extractOrderNameFromOcr(text) {
+  const rawLines = (text || '')
+    .split(/\r?\n/)
+    .map(line => line.replace(/[|_•·]+/g, ' ').replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  const labelPatterns = [
+    /^(ชื่อ\s*(ออเดอร์|ออร์เดอร์|order)?|order\s*name|name)\s*[:：\-]?\s*/i,
+    /^(รายการ|สินค้า|เมนู)\s*[:：\-]?\s*/i
+  ];
+
+  for (const line of rawLines) {
+    for (const p of labelPatterns) {
+      if (p.test(line)) {
+        const candidate = line.replace(p, '').trim();
+        if (candidate.length >= 2) return candidate.slice(0, 90);
+      }
+    }
+  }
+
+  const badWords = /(โทร|tel|phone|วันที่|วันส่ง|เวลา|ราคา|บาท|รวม|จำนวน|qty|total|date|time|address|ที่อยู่)/i;
+  const dateLike = /(\d{1,2}[\/\-.]\d{1,2}|\d{1,2}:\d{2}|\d+\s*(บาท|ชิ้น|pcs?))/i;
+  const useful = rawLines.find(line =>
+    line.length >= 3 &&
+    /[ก-๙A-Za-z]/.test(line) &&
+    !badWords.test(line) &&
+    !dateLike.test(line)
+  );
+  return useful ? useful.slice(0, 90) : '';
+}
+
+async function runOcrForImage(imageObj, targetInputId, mode) {
+  if (!imageObj) return toast('⚠️ กรุณาเลือกรูปก่อน');
+  if (!window.Tesseract) return toast('❌ โหลด OCR ไม่สำเร็จ กรุณาต่ออินเทอร์เน็ตแล้วเปิดหน้าใหม่');
+  if (isOcrRunning) return;
+
+  isOcrRunning = true;
+  const btn = document.getElementById(mode === 'edit' ? 'editOcrBtn' : 'ocrBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> กำลังอ่าน...'; }
+
+  try {
+    setOcrStatus(mode, 'กำลังโหลด OCR ภาษาไทย/อังกฤษ...');
+    const result = await Tesseract.recognize(imageObj.blob || imageObj.dataUrl, 'tha+eng', {
+      logger: m => {
+        if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+          setOcrStatus(mode, `กำลังอ่านตัวอักษร ${Math.round(m.progress * 100)}%`);
+        }
+      }
+    });
+    const foundName = extractOrderNameFromOcr(result.data.text);
+    if (!foundName) {
+      setOcrStatus(mode, 'อ่านได้ไม่ชัด กรุณาพิมพ์ชื่อเองหรือลองถ่ายรูปใหม่', 'error');
+      toast('⚠️ OCR อ่านชื่อไม่ชัด');
+      return;
+    }
+    document.getElementById(targetInputId).value = foundName;
+    setOcrStatus(mode, `เติมชื่อแล้ว: ${foundName}`, 'ok');
+    toast('✅ OCR เติมชื่อออเดอร์แล้ว');
+  } catch (err) {
+    console.error(err);
+    setOcrStatus(mode, 'OCR ไม่สำเร็จ กรุณาลองใหม่หรือพิมพ์ชื่อเอง', 'error');
+    toast('❌ OCR ไม่สำเร็จ');
+  } finally {
+    isOcrRunning = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🔎 อ่านชื่อจากรูป';
+    }
+  }
+}
+
+function readOrderNameFromImage() {
+  runOcrForImage(currentImgFileObj, 'orderName', 'create');
+}
+
+function readEditOrderNameFromImage() {
+  runOcrForImage(editImgFileObj, 'editName', 'edit');
 }
 
 // ════════════════════════════════════════════════════
@@ -953,9 +1093,11 @@ async function createOrder() {
   const name = document.getElementById('orderName').value.trim();
   const received = document.getElementById('orderReceived').value;
   const delivery = document.getElementById('orderDelivery').value;
+  const deliveryTime = document.getElementById('orderDeliveryTime').value;
   if (!name) return toast('⚠️ กรุณาใส่ชื่อออเดอร์');
   if (!received) return toast('⚠️ กรุณาเลือกวันรับออเดอร์');
   if (!delivery) return toast('⚠️ กรุณาเลือกวันส่ง/รับสินค้า');
+  if (!deliveryTime) return toast('⚠️ กรุณาเลือกเวลาส่ง/รับสินค้า');
 
   const btn = document.getElementById('createBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> กำลังสร้าง...';
@@ -967,7 +1109,7 @@ async function createOrder() {
 
   const id = Date.now().toString();
   const order = {
-    id, name, received, delivery,
+    id, name, received, delivery, deliveryTime,
     img: null,
     driveImgId: null,
     driveImgLink: null,
@@ -1006,10 +1148,12 @@ function resetForm() {
   document.getElementById('orderName').value = '';
   document.getElementById('orderReceived').value = today();
   document.getElementById('orderDelivery').value = '';
+  document.getElementById('orderDeliveryTime').value = '';
   currentImgData = null;
   currentImgFileObj = null;
   document.getElementById('imgPreview').style.display = 'none';
   document.getElementById('orderImg').value = '';
+  setOcrReady('create', false);
 }
 
 // ════════════════════════════════════════════════════
@@ -1020,6 +1164,10 @@ function thDate(iso) {
   const [y,m,d] = iso.split('-');
   const months = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   return `${parseInt(d)} ${months[parseInt(m)]} ${parseInt(y)+543}`;
+}
+function deliveryDateTimeText(o) {
+  const d = thDate(o.delivery);
+  return o.deliveryTime ? `${d} เวลา ${o.deliveryTime} น.` : d;
 }
 function daysAgo(isoDate) {
   const diff = Math.floor((new Date() - new Date(isoDate)) / 86400000);
@@ -1071,7 +1219,7 @@ function renderTrack() {
       <div class="order-card-body">
         <div class="order-meta">
           <div class="meta-item"><span class="meta-label">📥 วันรับ:</span><span class="meta-value">${thDate(o.received)}</span></div>
-          <div class="meta-item"><span class="meta-label">🚚 วันส่ง:</span><span class="meta-value ${late?'late':''}">${thDate(o.delivery)}</span><span class="days-ago">${daysUntil(o.delivery)}</span></div>
+          <div class="meta-item"><span class="meta-label">🚚 วัน/เวลาส่ง:</span><span class="meta-value ${late?'late':''}">${deliveryDateTimeText(o)}</span><span class="days-ago">${daysUntil(o.delivery)}</span></div>
           <div class="meta-item"><span class="meta-label">🕐 สร้างเมื่อ:</span><span class="meta-value">${daysAgo(o.createdAt)}</span></div>
         </div>
         <div class="order-actions">
@@ -1110,7 +1258,7 @@ function renderDone() {
       <div class="done-body">
         <div class="done-meta">
           <div class="meta-item"><span class="meta-label">📥 วันรับ:</span><span class="meta-value">${thDate(o.received)}</span></div>
-          <div class="meta-item"><span class="meta-label">🚚 วันส่ง:</span><span class="meta-value">${thDate(o.delivery)}</span></div>
+          <div class="meta-item"><span class="meta-label">🚚 วัน/เวลาส่ง:</span><span class="meta-value">${deliveryDateTimeText(o)}</span></div>
           <div class="meta-item"><span class="meta-label">✅ เสร็จเมื่อ:</span><span class="meta-value">${thDate(o.doneAt?o.doneAt.split('T')[0]:'')}</span></div>
         </div>
         ${o.driveImgLink||o.img ? `<div style="margin-top:10px">${imgBtn(o)}</div>` : ''}
@@ -1146,9 +1294,11 @@ function openEdit(id) {
   document.getElementById('editName').value=o.name;
   document.getElementById('editReceived').value=o.received;
   document.getElementById('editDelivery').value=o.delivery;
+  document.getElementById('editDeliveryTime').value=o.deliveryTime || '';
   editImgData=null;
   editImgFileObj=null;
   document.getElementById('editImgPreviewWrap').style.display='none';
+  setOcrReady('edit', false);
   document.getElementById('editModal').classList.add('open');
 }
 function closeEditModal(e) {
@@ -1161,6 +1311,7 @@ async function saveEdit() {
   o.name=document.getElementById('editName').value.trim()||o.name;
   o.received=document.getElementById('editReceived').value||o.received;
   o.delivery=document.getElementById('editDelivery').value||o.delivery;
+  o.deliveryTime=document.getElementById('editDeliveryTime').value||o.deliveryTime||'';
   o.updatedAt=new Date().toISOString();
   if(editImgFileObj) {
     if(!driveReady) return toast('⚠️ กรุณากดเชื่อมต่อ Google Drive ก่อน เพื่อเก็บรูปบน server จริง');
@@ -1228,8 +1379,8 @@ function closeImgModal(e) {
 function exportCSV() {
   const done=orders.filter(o=>o.status==='done');
   if(!done.length) return toast('ไม่มีข้อมูล');
-  const header=['ID','ชื่อออเดอร์','วันรับออเดอร์','วันส่ง','วันเสร็จสิ้น','Drive Image'];
-  const rows=done.map(o=>[o.id,`"${o.name}"`,o.received,o.delivery,o.doneAt?o.doneAt.split('T')[0]:'',o.driveImgLink||'']);
+  const header=['ID','ชื่อออเดอร์','วันรับออเดอร์','วันส่ง','เวลาส่ง/รับ','วันเสร็จสิ้น','Drive Image'];
+  const rows=done.map(o=>[o.id,`"${o.name.replace(/"/g,'""')}"`,o.received,o.delivery,o.deliveryTime||'',o.doneAt?o.doneAt.split('T')[0]:'',o.driveImgLink||'']);
   const csv='\uFEFF'+[header,...rows].map(r=>r.join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
@@ -1255,7 +1406,7 @@ function exportImg() {
     ctx.fillStyle=i%2===0?'#FEFCF8':'#F9F0E4'; ctx.fillRect(0,y,W,ROW);
     ctx.fillStyle='#5C3D1E'; ctx.font='bold 15px sans-serif'; ctx.fillText(o.name,20,y+24);
     ctx.fillStyle='#888'; ctx.font='12px sans-serif';
-    ctx.fillText(`📥 ${o.received}  🚚 ${o.delivery}  ✅ ${o.doneAt?o.doneAt.split('T')[0]:'-'}`,20,y+46);
+    ctx.fillText(`📥 ${o.received}  🚚 ${o.delivery}${o.deliveryTime ? ' ' + o.deliveryTime : ''}  ✅ ${o.doneAt?o.doneAt.split('T')[0]:'-'}`,20,y+46);
     ctx.strokeStyle='#D4B896'; ctx.lineWidth=0.5;
     ctx.beginPath(); ctx.moveTo(0,y+ROW-0.5); ctx.lineTo(W,y+ROW-0.5); ctx.stroke();
   });
